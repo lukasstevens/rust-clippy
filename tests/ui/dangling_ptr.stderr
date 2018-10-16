@@ -1,0 +1,14 @@
+error: `1 as *const _` detected. Consider using `ptr::dangling()`
+ --> $DIR/dangling_ptr.rs:5:13
+  |
+5 |     let x = 1 as *const usize;
+  |             ^^^^^^^^^^^^^^^^^
+  |
+  = note: `-D dangling-ptr` implied by `-D warnings`
+
+error: `1 as *mut _` detected. Consider using `ptr::dangling_mut()`
+ --> $DIR/dangling_ptr.rs:6:13
+  |
+6 |     let y = 1 as *mut f64;
+  |             ^^^^^^^^^^^^^
+

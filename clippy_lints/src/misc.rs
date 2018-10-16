@@ -208,6 +208,24 @@ declare_clippy_lint! {
     "using 0 as *{const, mut} T"
 }
 
+/// **What it does:** Catch casts from `1` to some pointer type
+///
+/// **Why is this bad?** This generally means a dangling pointer and is better expressed as
+/// {`std`, `core`}`::ptr::`{`dangling`, `dangling_mut`}.
+///
+/// **Known problems:** None.
+///
+/// **Example:**
+///
+/// ```rust
+/// 1 as *const u32
+/// ```
+declare_lint! {
+    pub DANGLING_PTR,
+    Allow,
+    "using 1 as *{const, mut} T"
+}
+
 /// **What it does:** Checks for (in-)equality comparisons on floating-point
 /// value and constant, except in functions called `*eq*` (which probably
 /// implement equality for a type involving floats).
@@ -245,6 +263,7 @@ impl LintPass for Pass {
             USED_UNDERSCORE_BINDING,
             SHORT_CIRCUIT_STATEMENT,
             ZERO_PTR,
+            DANGLING_PTR,
             FLOAT_CMP_CONST
         )
     }
@@ -614,14 +633,21 @@ fn check_cast(cx: &LateContext<'_, '_>, span: Span, e: &Expr, ty: &Ty) {
         if let TyKind::Ptr(MutTy { mutbl, .. }) = ty.node;
         if let ExprKind::Lit(ref lit) = e.node;
         if let LitKind::Int(value, ..) = lit.node;
-        if value == 0;
         if !in_constant(cx, e.id);
         then {
-            let msg = match mutbl {
-                Mutability::MutMutable => "`0 as *mut _` detected. Consider using `ptr::null_mut()`",
-                Mutability::MutImmutable => "`0 as *const _` detected. Consider using `ptr::null()`",
-            };
-            span_lint(cx, ZERO_PTR, span, msg);
+            if value == 0 {
+                let msg = match mutbl {
+                    Mutability::MutMutable => "`0 as *mut _` detected. Consider using `ptr::null_mut()`",
+                    Mutability::MutImmutable => "`0 as *const _` detected. Consider using `ptr::null()`",
+                };
+                span_lint(cx, ZERO_PTR, span, msg);
+            } else if value == 1 {
+                let msg = match mutbl {
+                    Mutability::MutMutable => "`1 as *mut _` detected. Consider using `ptr::dangling_mut()`",
+                    Mutability::MutImmutable => "`1 as *const _` detected. Consider using `ptr::dangling()`",
+                };
+                span_lint(cx, DANGLING_PTR, span, msg);
+            }
         }
     }
 }
